@@ -29,202 +29,203 @@ NOTICE
 请参考ucore lab2代码，采用`struct pmm_manager` 根据你的`学号 mod 4`的结果值，选择四种（0:最优匹配，1:最差匹配，2:最先匹配，3:buddy systemm）分配算法中的一种或多种，在应用程序层面(可以 用python,ruby,C++，C，LISP等高语言)来实现，给出你的设思路，并给出测试用例。 (spoc)
 
 best_fit :
-#include <iostream>
-#include <stdlib.h>
-using namespace std;
+
+	#include <iostream>
+	#include <stdlib.h>
+	using namespace std;
 
 
-#define MAX_length 640 //最大内存空间为640KB
-#define Free 0 //空闲状态
-#define Busy 1 //已用状态
-#define OK 1
-#define ERROR 0
+	#define MAX_length 640 //最大内存空间为640KB
+	#define Free 0 //空闲状态
+	#define Busy 1 //已用状态
+	#define OK 1
+	#define ERROR 0
 
-struct freearea
-{
-	long size;
-	long address;
-	int state;
-};
-
-typedef struct DulNode
-{
-	freearea data;
-	struct DulNode *prior;
-	struct DulNode *next;
-}DuLNode,*DuLinkList;
-
-DuLinkList block_first;
-DuLinkList block_last;
-
-int best_fit(int request);
-int initblock();
-int alloc();
-int free();
-
-
-int initblock()
-{
-	block_first=(DuLinkList)malloc(sizeof(DuLNode));
-	block_last=(DuLinkList)malloc(sizeof(DuLNode));
-	block_first->prior=NULL;
-	block_first->next=block_last;
-	block_last->prior=block_first;
-	block_last->next=NULL;
-	block_last->data.address=0;
-	block_last->data.size=MAX_length;
-	block_last->data.state=Free;
-	return OK;
-}
-
-
-int alloc()
-{
-	int request = 0;
-	cout<<"请输入需要分配的主存大小(单位:KB)："; 
-	cin>>request;
-	if(request<0 ||request==0) 
+	struct freearea
 	{
-		cout<<"分配大小不合适，请重试！"<<endl;
-		return ERROR;
+		long size;
+		long address;
+		int state;
+	};
+
+	typedef struct DulNode
+	{
+		freearea data;
+		struct DulNode *prior;
+		struct DulNode *next;
+	}DuLNode,*DuLinkList;
+
+	DuLinkList block_first;
+	DuLinkList block_last;
+
+	int best_fit(int request);
+	int initblock();
+	int alloc();
+	int free();
+
+
+	int initblock()
+	{
+		block_first=(DuLinkList)malloc(sizeof(DuLNode));
+		block_last=(DuLinkList)malloc(sizeof(DuLNode));
+		block_first->prior=NULL;
+		block_first->next=block_last;
+		block_last->prior=block_first;
+		block_last->next=NULL;
+		block_last->data.address=0;
+		block_last->data.size=MAX_length;
+		block_last->data.state=Free;
+		return OK;
 	}
 
-	if(best_fit(request)==OK) cout<<"分配成功！"<<endl;
-	else cout<<"内存不足，分配失败！"<<endl;
-	return OK;
-}
 
-
-int best_fit(int request)
-{
-	int ch; //记录最小剩余空间
-	DuLinkList temp=(DuLinkList)malloc(sizeof(DuLNode)); 
-	temp->data.size=request;
-	temp->data.state=Busy;
-	DuLNode *p=block_first->next;
-	DuLNode *q=NULL; //记录最佳插入位置
-
-	while(p) //初始化最小空间和最佳位置
+	int alloc()
 	{
-		if(p->data.state==Free && (p->data.size>=request) )
+		int request = 0;
+		cout<<"请输入需要分配的主存大小(单位:KB)："; 
+		cin>>request;
+		if(request<0 ||request==0) 
 		{
-			if(q==NULL)
-			{
-				q=p;
-				ch=p->data.size-request;
-			}
-			else if(q->data.size > p->data.size)
-			{
-				q=p;
-				ch=p->data.size-request;
-			}
-		}
-		p=p->next;
-	}
-
-	if(q==NULL) return ERROR;//没有找到空闲块
-
-	else if(q->data.size==request)
-	{
-		q->data.state=Busy;
-		return OK;
-	}
-	else
-	{
-		temp->prior=q->prior;
-		temp->next=q;
-		temp->data.address=q->data.address;
-		q->prior->next=temp;
-		q->prior=temp;
-		q->data.address+=request;
-		q->data.size=ch;
-		return OK;
-	}
-	return OK;
-}
-
-int free(int flag)
-{
-	DuLNode *p=block_first;
-	for(int i= 0; i <= flag; i++)
-		if(p!=NULL)
-			p=p->next;
-		else
+			cout<<"分配大小不合适，请重试！"<<endl;
 			return ERROR;
+		}
 
-	p->data.state=Free;
-	if(p->prior!=block_first && p->prior->data.state==Free)//与前面的空闲块相连
-	{
-		p->prior->data.size+=p->data.size;
-		p->prior->next=p->next;
-		p->next->prior=p->prior;
-		p=p->prior;
-	}
-	if(p->next!=block_last && p->next->data.state==Free)//与后面的空闲块相连
-	{
-		p->data.size+=p->next->data.size;
-		p->next->next->prior=p;
-		p->next=p->next->next; 
-	}
-	if(p->next==block_last && p->next->data.state==Free)//与最后的空闲块相连
-	{
-		p->data.size+=p->next->data.size;
-		p->next=NULL; 
+		if(best_fit(request)==OK) cout<<"分配成功！"<<endl;
+		else cout<<"内存不足，分配失败！"<<endl;
+		return OK;
 	}
 
-	return OK;
-}
 
-void show()
-{
-	int flag = 0;
-	cout<<"\n主存分配情况:\n";
-	cout<<"++++++++++++++++++++++++++++++++++++++++++++++\n\n";
-	DuLNode *p=block_first->next;
-	cout<<"分区号\t起始地址\t分区大小\t状态\n\n";
-	while(p)
+	int best_fit(int request)
 	{
-		cout<<"  "<<flag++<<"\t";
-		cout<<"  "<<p->data.address<<"\t\t";
-		cout<<" "<<p->data.size<<"KB\t\t";
-		if(p->data.state==Free) cout<<"空闲\n\n";
-		else cout<<"已分配\n\n";
-		p=p->next;
-	}
-	cout<<"++++++++++++++++++++++++++++++++++++++++++++++\n\n";
-}
-
-int main()
-{
-	initblock();
+		int ch; //记录最小剩余空间
+		DuLinkList temp=(DuLinkList)malloc(sizeof(DuLNode)); 
+		temp->data.size=request;
+		temp->data.state=Busy;
+		DuLNode *p=block_first->next;
+		DuLNode *q=NULL; //记录最佳插入位置
 	
-	while(1)
-	{
-		int choice;
-		show();
-		cout<<"请输入您的操作：";
-		cout<<"\n1: 分配内存\n2: 回收内存\n0: 退出\n";
-
-		cin>>choice;
-		if(choice==1) 
-			alloc(); // 分配内存
-		else if(choice==2)  // 内存回收
+		while(p) //初始化最小空间和最佳位置
 		{
-			int flag;
-			cout<<"请输入您要释放的分区号：";
-			cin>>flag;
-			free(flag);
-		}
-		else if(choice==0) break; //退出
-		else //输入操作有误
-		{
-			cout<<"输入有误，请重试！"<<endl;
-			continue;
+			if(p->data.state==Free && (p->data.size>=request) )
+			{
+				if(q==NULL)
+				{
+					q=p;
+					ch=p->data.size-request;
+				}
+				else if(q->data.size > p->data.size)
+				{
+					q=p;
+					ch=p->data.size-request;
+				}
+			}
+			p=p->next;
 		}
 
+		if(q==NULL) return ERROR;//没有找到空闲块
+	
+		else if(q->data.size==request)
+		{
+			q->data.state=Busy;
+			return OK;
+		}
+		else
+		{
+			temp->prior=q->prior;
+			temp->next=q;
+			temp->data.address=q->data.address;
+			q->prior->next=temp;
+			q->prior=temp;
+			q->data.address+=request;
+			q->data.size=ch;
+			return OK;
+		}
+		return OK;
 	}
-	return 0;
-}
+	
+	int free(int flag)
+	{
+		DuLNode *p=block_first;
+		for(int i= 0; i <= flag; i++)
+			if(p!=NULL)
+				p=p->next;
+			else
+				return ERROR;
+	
+		p->data.state=Free;
+		if(p->prior!=block_first && p->prior->data.state==Free)//与前面的空闲块相连
+		{
+			p->prior->data.size+=p->data.size;
+			p->prior->next=p->next;
+			p->next->prior=p->prior;
+			p=p->prior;
+		}
+		if(p->next!=block_last && p->next->data.state==Free)//与后面的空闲块相连
+		{
+			p->data.size+=p->next->data.size;
+			p->next->next->prior=p;
+			p->next=p->next->next; 
+		}
+		if(p->next==block_last && p->next->data.state==Free)//与最后的空闲块相连
+		{
+			p->data.size+=p->next->data.size;
+			p->next=NULL; 
+		}
+	
+		return OK;
+	}
+	
+	void show()
+	{
+		int flag = 0;
+		cout<<"\n主存分配情况:\n";
+		cout<<"++++++++++++++++++++++++++++++++++++++++++++++\n\n";
+		DuLNode *p=block_first->next;
+		cout<<"分区号\t起始地址\t分区大小\t状态\n\n";
+		while(p)
+		{
+			cout<<"  "<<flag++<<"\t";
+			cout<<"  "<<p->data.address<<"\t\t";
+			cout<<" "<<p->data.size<<"KB\t\t";
+			if(p->data.state==Free) cout<<"空闲\n\n";
+			else cout<<"已分配\n\n";
+			p=p->next;
+		}
+		cout<<"++++++++++++++++++++++++++++++++++++++++++++++\n\n";
+	}
+	
+	int main()
+	{
+		initblock();
+		
+		while(1)
+		{
+			int choice;
+			show();
+			cout<<"请输入您的操作：";
+			cout<<"\n1: 分配内存\n2: 回收内存\n0: 退出\n";
+	
+			cin>>choice;
+			if(choice==1) 
+				alloc(); // 分配内存
+			else if(choice==2)  // 内存回收
+			{
+				int flag;
+				cout<<"请输入您要释放的分区号：";
+				cin>>flag;
+				free(flag);
+			}
+			else if(choice==0) break; //退出
+			else //输入操作有误
+			{
+				cout<<"输入有误，请重试！"<<endl;
+				continue;
+			}
+	
+		}
+		return 0;
+	}
 
 ```
 如何表示空闲块？ 如何表示空闲块列表？ 
